@@ -1327,6 +1327,7 @@
     // ============================================================
     const menuData = {
       cervezas: {
+        sectionName: "🍻 Cervezas por Unidad",
         categories: [
           {
             name: "PERSONAL",
@@ -1392,6 +1393,7 @@
         ]
       },
       cubetazos: {
+        sectionName: "🪣 Cubetazos",
         categories: [
           {
             name: "CUBETAZOS 269 X 6 UNID",
@@ -1418,6 +1420,7 @@
         ]
       },
       combosTragos: {
+        sectionName: "🥃 Combos de Tragos",
         categories: [
           {
             name: "AGUARDIENTE AMARILLO MANZANARES (AGUARDIENTE AMARILLITO)",
@@ -1501,6 +1504,7 @@
         ]
       },
       cocteles: {
+        sectionName: "🍹 Cócteles Preparados",
         categories: [
           {
             name: "COCTELES PREPARADOS",
@@ -1516,6 +1520,7 @@
         ]
       },
       bebidasEspeciales: {
+        sectionName: "🍸 Bebidas Especiales",
         categories: [
           {
             name: "BEBIDAS ESPECIALES",
@@ -1534,6 +1539,7 @@
         ]
       },
       bebidasSinAlcohol: {
+        sectionName: "🥤 Bebidas Sin Alcohol",
         categories: [
           {
             name: "BEBIDAS SIN ALCOHOL",
@@ -1553,6 +1559,7 @@
         ]
       },
       energizantes: {
+        sectionName: "⚡ Energizantes",
         categories: [
           {
             name: "ENERGIZANTES",
@@ -1567,6 +1574,7 @@
         ]
       },
       adicionales: {
+        sectionName: "🍋 Adicionales y para Picar",
         categories: [
           {
             name: "SERVICIOS",
@@ -1608,19 +1616,47 @@
       window.open(`https://wa.me/${CONFIG.whatsappNumber}?text=${encodeURIComponent(msg)}`, "_blank");
     }
 
+    // ============================================================
+    // 🟢 FUNCIÓN PRINCIPAL - ENVÍO A WHATSAPP CON SECCIONES
+    // ============================================================
     function sendOrderToWhatsApp() {
       if (!cart.size) {
         alert("⚠️ No hay productos en el pedido.");
         return;
       }
+
       let msg = `🍻 Hola! Quiero pedir en ${CONFIG.storeName}:\n\n`;
       let total = 0;
-      cart.forEach((v, k) => {
-        const num = parseInt((v.price || "$ 0").replace(/[^0-9]/g, "")) || 0;
-        total += num * v.qty;
-        msg += `• ${v.displayName} (x${v.qty}) - ${v.price}\n`;
+
+      // Agrupar por sección y categoría
+      const grouped = {};
+      cart.forEach((v, key) => {
+        const section = v.section || "Sin sección";
+        const category = v.category || "Sin categoría";
+        if (!grouped[section]) {
+          grouped[section] = {};
+        }
+        if (!grouped[section][category]) {
+          grouped[section][category] = [];
+        }
+        grouped[section][category].push(v);
       });
-      msg += `\n💰 Total estimado: $ ${total.toLocaleString()}\n\n📍 Por favor confirma disponibilidad.`;
+
+      // Construir mensaje con secciones y categorías
+      for (const [section, categories] of Object.entries(grouped)) {
+        msg += `📌 ${section}:\n`;
+        for (const [category, items] of Object.entries(categories)) {
+          msg += `   🔹 ${category}:\n`;
+          items.forEach(v => {
+            const num = parseInt((v.price || "$ 0").replace(/[^0-9]/g, "")) || 0;
+            total += num * v.qty;
+            msg += `      • ${v.displayName} (x${v.qty}) - ${v.price}\n`;
+          });
+        }
+        msg += `\n`;
+      }
+
+      msg += `💰 Total estimado: $ ${total.toLocaleString()}\n\n📍 Por favor confirma disponibilidad.`;
       wa(msg);
     }
 
@@ -1792,11 +1828,13 @@
     // 🏗️ RENDERIZAR SECCIONES
     // ============================================================
 
-    function renderItems(gridId, categories, sectionName, isCombo = false) {
+    function renderItems(gridId, sectionData, sectionKey, isCombo = false) {
       const grid = document.getElementById(gridId);
       if (!grid) return;
 
-      categories.forEach((cat) => {
+      const sectionName = sectionData.sectionName || sectionKey;
+
+      sectionData.categories.forEach((cat) => {
         const card = document.createElement("div");
         card.className = "card";
 
@@ -1820,6 +1858,7 @@
           row.className = "row";
           row.setAttribute("data-name", item.name);
           row.setAttribute("data-category", cat.name);
+          row.setAttribute("data-section", sectionName);
 
           const nm = document.createElement("div");
           nm.className = "name";
@@ -1838,6 +1877,7 @@
           addBtn.textContent = "+";
           addBtn.setAttribute("data-name", item.name);
           addBtn.setAttribute("data-category", cat.name);
+          addBtn.setAttribute("data-section", sectionName);
           ops.appendChild(addBtn);
 
           row.append(nm, pr, ops);
@@ -1850,14 +1890,14 @@
     }
 
     function buildMenu() {
-      renderItems('cervezasGrid', menuData.cervezas.categories, 'cervezas');
-      renderItems('cubetazosGrid', menuData.cubetazos.categories, 'cubetazos');
-      renderItems('combosTragosGrid', menuData.combosTragos.categories, 'combosTragos', true);
-      renderItems('coctelesGrid', menuData.cocteles.categories, 'cocteles');
-      renderItems('bebidasEspecialesGrid', menuData.bebidasEspeciales.categories, 'bebidasEspeciales');
-      renderItems('bebidasSinAlcoholGrid', menuData.bebidasSinAlcohol.categories, 'bebidasSinAlcohol');
-      renderItems('energizantesGrid', menuData.energizantes.categories, 'energizantes');
-      renderItems('adicionalesGrid', menuData.adicionales.categories, 'adicionales');
+      renderItems('cervezasGrid', menuData.cervezas, 'cervezas');
+      renderItems('cubetazosGrid', menuData.cubetazos, 'cubetazos');
+      renderItems('combosTragosGrid', menuData.combosTragos, 'combosTragos', true);
+      renderItems('coctelesGrid', menuData.cocteles, 'cocteles');
+      renderItems('bebidasEspecialesGrid', menuData.bebidasEspeciales, 'bebidasEspeciales');
+      renderItems('bebidasSinAlcoholGrid', menuData.bebidasSinAlcohol, 'bebidasSinAlcohol');
+      renderItems('energizantesGrid', menuData.energizantes, 'energizantes');
+      renderItems('adicionalesGrid', menuData.adicionales, 'adicionales');
     }
 
     // ============================================================
@@ -2073,6 +2113,7 @@
 
       const name = btn.getAttribute("data-name");
       const category = btn.getAttribute("data-category");
+      const section = btn.getAttribute("data-section") || "Sin sección";
       if (!name || !category) return;
 
       const act = btn.getAttribute("data-act");
@@ -2125,6 +2166,7 @@
       cart.set(key, { 
         name: name, 
         category: foundCategory, 
+        section: section,
         displayName: name,
         price: item.price, 
         qty: q 
