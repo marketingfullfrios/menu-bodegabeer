@@ -1,0 +1,155 @@
+{
+  "restaurant_name": "Bodega Beer",
+  "slogans": [
+    "PAY WHAT'S FAIR",
+    "DEMAND YOUR RECEIPT"
+  ],
+  "menu": [
+    {
+      "category": "PERSONAL BOTTLED BEER",
+      "items": [
+        { "name": "COSTEÑITA", "price": "$ 2.500" },
+        { "name": "POKER", "price": "$ 3.000" },
+        { "name": "AGUILA LIGHT", "price": "$ 3.000" },
+        { "name": "AGUILA ORIGINAL", "price": "$ 3.000" },
+        { "name": "BUDWEISER BOTTLE", "price": "$ 3.000" },
+        { "name": "SOL BEER", "price": "$ 3.500" },
+        { "name": "CORONITA", "price": "$ 4.000" },
+        { "name": "CORONA", "price": "$ 6.500" },
+        { "name": "STELLA ARTOIS", "price": "$ 7.000" }
+      ]
+    },
+    {
+      "category": "750 CC BEERS",
+      "items": [
+        { "name": "COSTEÑA", "price": "$ 4.000" },
+        { "name": "ANDINA GOLDEN", "price": "$ 5.000" },
+        { "name": "AGUILA LIGHT", "price": "$ 5.500" },
+        { "name": "AGUILA ORIGINAL", "price": "$ 5.500" },
+        { "name": "POKER", "price": "$ 5.500" }
+      ]
+    },
+    {
+      "category": "LITER BEERS",
+      "items": [
+        { "name": "POKER", "price": "$ 7.000" },
+        { "name": "AGUILA LIGHT", "price": "$ 7.000" },
+        { "name": "AGUILA ORIGINAL", "price": "$ 7.000" },
+        { "name": "CLUB COLOMBIA GOLDEN", "price": "$ 8.000" }
+      ]
+    },
+    {
+      "category": "269 CC CANNED BEERS (Left Column)",
+      "items": [
+        { "name": "ANDINA GOLDEN/ LIGHT", "price": "$ 2.500" },
+        { "name": "POKER", "price": "$ 3.000" },
+        { "name": "AGUILA LIGHT", "price": "$ 3.000" },
+        { "name": "BUDWEISER", "price": "$ 3.000" },
+        { "name": "HEINEKEN", "price": "$ 3.000" },
+        { "name": "REDS", "price": "$ 3.500" },
+        { "name": "CORONITA", "price": "$ 4.500" }
+      ]
+    },
+    {
+      "category": "269 CC CANNED BEER (Middle Column)",
+      "items": [
+        { "name": "ANDINA GOLDEN/LIGHT", "price": "$ 3.000" },
+        { "name": "AZTECA", "price": "$ 3.000" },
+        { "name": "COSTEÑA BACANA CAN 330 CC", "price": "$ 3.500" },
+        { "name": "POKER", "price": "$ 4.000" },
+        { "name": "AGUILA ORIGINAL", "price": "$ 4.000" },
+        { "name": "AGUILA LIGHT", "price": "$ 4.000" },
+        { "name": "HEINEKEN CAN 310 CC", "price": "$ 4.000" },
+        { "name": "CLUB COLOMBIA GOLDEN CAN", "price": "$ 4.000" },
+        { "name": "CLUB COLOMBIA BLACK CAN", "price": "$ 4.500" },
+        { "name": "CLUB COLOMBIA RED CAN", "price": "$ 4.500" }
+      ]
+    },
+    {
+      "category": "BUCKETS X 6 UNITS",
+      "items": [
+        { "name": "POKER CAN 269 CC", "price": "$ 17.000" },
+        { "name": "AGUILA LIGHT CAN 269 CC", "price": "$ 15.000" },
+        { "name": "ANDINA GOLDEN CAN 269 CC", "price": "$ 15.000" },
+        { "name": "ANDINA LIGHT CAN 269 CC", "price": "$ 15.000" },
+        { "name": "BUDWEISER CAN 269 CC", "price": "$ 17.000" },
+        { "name": "ANDINA CAN 330 CC", "price": "$ 18.000" },
+        { "name": "ANDINA LIGHT CAN 330 CC", "price": "$ 18.000" },
+        { "name": "COSTEÑA BACANA CAN 330 CC", "price": "$ 22.000" },
+        { "name": "REDS CAN 269 CC", "price": "$ 20.000" },
+        { "name": "AGUILA LIGHT CAN 330 CC", "price": "$ 21.000" },
+        { "name": "CLUB COLOMBIA GOLDEN CAN", "price": "$ 22.000" },
+        { "name": "HEINEKEN CAN 310 CC", "price": "$ 22.000" },
+        { "name": "POKER CAN 330 CC", "price": "$ 22.000" },
+        { "name": "CORONITA BOTTLE 210 CC", "price": "$ 24.000" },
+        { "name": "CORONITA CAN 269 CC", "price": "$ 25.000" }
+      ]
+    },
+    {
+      "category": "PREPARED COCKTAILS",
+      "items": [
+        { "name": "L I K E ICE COOLER", "price": "$ 4.000" },
+        { "name": "SMIRNOFF ICE BOTTLE", "price": "$ 9.000" },
+        { "name": "CUBA LIBRE COCKTAIL 295 ML", "price": "$ 15.000" },
+        { "name": "MOJITO COCKTAIL 295 ML", "price": "$ 15.000" },
+        { "name": "FOUR LOKO", "price": "$ 18.000" }
+      ]
+    },
+    {
+      "category": "ENERGY DRINKS",
+      "items": [
+        { "name": "SPEED MAX CAN 269", "price": "$ 2.500" },
+        { "name": "VIVE 100", "price": "$ 2.500" },
+        { "name": "RED BULL CAN", "price": "$ 8.000" },
+        { "name": "MONSTER CAN 473ML", "price": "$ 10.000" }
+      ]
+    },
+    {
+      "category": "NON-ALCOHOLIC BEVERAGES",
+      "items": [
+        { "name": "POSTOBON SODA MINI", "price": "$ 2.000" },
+        { "name": "PONY MALTA MINI", "price": "$ 2.000" },
+        { "name": "BIG SODA", "price": "$ 2.000" },
+        { "name": "WATER PET 600 ML", "price": "$ 2.500" },
+        { "name": "WATER PET LITER", "price": "$ 3.000" },
+        { "name": "SCHWEPPES SODA 10 OZ", "price": "$ 3.000" },
+        { "name": "BRETAÑA FRIOPACK 10 OZ", "price": "$ 3.000" },
+        { "name": "COCACOLA PET 400 ML", "price": "$ 3.000" },
+        { "name": "POSTOBON SODAS PET", "price": "$ 3.000" },
+        { "name": "HIT PET 500 ML", "price": "$ 3.000" },
+        { "name": "MALTA LEONA 400 CC", "price": "$ 3.000" },
+        { "name": "PONY MALTA PET 330 CC", "price": "$ 3.000" },
+        { "name": "QUATRO PET 400 ML", "price": "$ 3.000" },
+        { "name": "COLA & POLA CAN 330 CC", "price": "$ 3.500" },
+        { "name": "GATORADE PET 500 ML", "price": "$ 4.500" },
+        { "name": "GATORADE PET 1000 ML", "price": "$ 9.000" },
+        { "name": "ELECTROLIT", "price": "$ 9.000" }
+      ]
+    },
+    {
+      "category": "COMBOS",
+      "items": [
+        { "name": "COMBO YELLOW AGUARDIENTE MANZANARES 350 ML + ELECTROLIT + LIME-MANGO + ICE", "price": "$ 50.000" },
+        { "name": "COMBO YELLOW AGUARDIENTE MANZANARES 750 ML + ELECTROLIT + LIME MANGO + ICE", "price": "$ 75.000" },
+        { "name": "COMBO AGUARDIENTE ANTIOQUEÑO BLUE CAP JUG 2000 ML + SODA + LIME + ICE", "price": "$ 130.000" },
+        { "name": "COMBO AGUARDIENTE ANTIOQUEÑO BLUE CAP 1000 ML + SODA + LIME + ICE", "price": "$ 70.000" },
+        { "name": "COMBO AGUARDIENTE ANTIOQUEÑO JUG 750 ML + SODA + LIME + ICE", "price": "$ 60.000" },
+        { "name": "COMBO AGUARDIENTE ANTIOQUEÑO BLUE CAP 375 ML + SODA + LIME + ICE", "price": "$ 35.000" },
+        { "name": "COMBO AGUARDIENTE ANTIOQUEÑO GREEN CAP 1000 ML + SODA + LIME + ICE", "price": "$ 65.000" },
+        { "name": "COMBO AGUARDIENTE ANTIOQUEÑO GREEN CAP 750 ML + 1000 ML SODA + LIME + ICE", "price": "$ 55.000" },
+        { "name": "COMBO AGUARDIENTE ANTIOQUEÑO GREEN CAP 375 ML + 1000 ML SODA + LIME + ICE", "price": "$ 30.000" },
+        { "name": "AGUARDIENTE CRISTAL XS JUG + SODA + LIME + ICE", "price": "$ 95.000" },
+        { "name": "AGUARDIENTE CRISTAL XS 750 ML + SODA + LIME + ICE", "price": "$ 50.000" },
+        { "name": "AGUARDIENTE CRISTAL XS 375 ML + SODA + LIME + ICE", "price": "$ 30.000" },
+        { "name": "COMBO TRADITIONAL RON CALDAS JUG + COCACOLA 1.5 L + LIME + ICE", "price": "$ 140.000" },
+        { "name": "COMBO TRADITIONAL RON CALDAS 750 ML + COCACOLA PET 400 ML + LIME + ICE", "price": "$ 70.000" },
+        { "name": "COMBO TRADITIONAL RON CALDAS 375 ML + COCACOLA PET 400 ML + LIME + ICE", "price": "$ 45.000" },
+        { "name": "COMBO RON MEDELLIN 750 ML + COCACOLA PET 400 ML + LIME + ICE", "price": "$ 70.000" },
+        { "name": "COMBO RON MEDELLIN 375 ML + COCACOLA PET 400 ML + LIME + ICE", "price": "$ 45.000" },
+        { "name": "WHISKY GRAND 12 YEARS OLD PARR 750 ML + SODA + LIME + ICE", "price": "$ 170.000" },
+        { "name": "BUCHANAN'S DELUXE 12 YEARS 750 ML + SODA + LIME + ICE", "price": "$ 190.000" },
+        { "name": "BUCHANAN'S MASTER 12 YEARS 750 ML + SODA + LIME + ICE", "price": "$ 230.000" }
+      ]
+    }
+  ]
+}
