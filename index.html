@@ -7,7 +7,6 @@
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
     gtag('js', new Date());
-  
     gtag('config', 'G-G2NEL0QL3M');
   </script>
   <meta charset="UTF-8" />
@@ -95,8 +94,7 @@
   <!-- ============================================================
        🔒 CABECERAS DE SEGURIDAD (defensa en profundidad)
        ============================================================ -->
-  <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self'; frame-src 'self' https://www.google.com https://maps.google.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://script.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://script.google.com https://api.ipify.org https://ipapi.co; frame-src 'self' https://www.google.com https://maps.google.com; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" />
   <meta name="referrer" content="no-referrer" />
   <meta name="theme-color" content="#0a0a0a" />
 
@@ -104,6 +102,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="icon" type="image/svg+xml" href="src/logo/logo-bodega-beer.svg" />
+  
+  <!-- ============================================================
+       📡 SISTEMA DE LOG - CONEXIÓN CON GOOGLE SHEETS
+       ============================================================ -->
   <style>
     /* ============================================================
        🎨 VARIABLES CSS
@@ -1454,6 +1456,224 @@
 
   <script>
     // ============================================================
+    // 📡 SISTEMA DE LOG - REGISTRO DE ACTIVIDAD
+    // ============================================================
+    
+    /**
+     * Sistema de Log para Bodega Beer
+     * Registra:
+     * - Visitas al sitio (con datos del visitante)
+     * - Agregados al carrito
+     * - Finalización de pedidos (envío a WhatsApp)
+     * - Datos del usuario (IP, ubicación, navegador)
+     */
+    class ActivityLogger {
+      constructor() {
+        this.sessionId = this.generateSessionId();
+        this.visitId = null;
+        this.isLoggingEnabled = true;
+        this.apiEndpoint = 'https://script.google.com/macros/s/AKfycbzJ6EZdUiepvYjJfADNCNMiMB6oLSwIEWDXrB6rQB_lqNOtBURU5SHLvqGRgMtu59tW/exec'; // ¡REEMPLAZA CON TU URL!
+        this.buffer = [];
+        this.bufferSize = 5;
+        this.flushInterval = 30000; // 30 segundos
+        this.userData = null;
+        
+        this.init();
+      }
+
+      generateSessionId() {
+        return 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      }
+
+      async init() {
+        // Obtener datos del usuario
+        this.userData = await this.getUserData();
+        
+        // Registrar visita
+        await this.logVisit();
+        
+        // Configurar flush automático
+        setInterval(() => this.flush(), this.flushInterval);
+        
+        // Registrar cuando el usuario cierra la pestaña
+        window.addEventListener('beforeunload', () => {
+          this.flush(true);
+        });
+        
+        console.log('📊 Sistema de Log inicializado');
+      }
+
+      async getUserData() {
+        try {
+          // Obtener IP
+          const ipResponse = await fetch('https://api.ipify.org?format=json');
+          const ipData = await ipResponse.json();
+          
+          // Obtener ubicación
+          const geoResponse = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
+          const geoData = await geoResponse.json();
+          
+          return {
+            ip: ipData.ip,
+            country: geoData.country_name || 'Desconocido',
+            city: geoData.city || 'Desconocido',
+            region: geoData.region || 'Desconocido',
+            timezone: geoData.timezone || 'Desconocido',
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            language: navigator.language,
+            screenResolution: `${screen.width}x${screen.height}`
+          };
+        } catch (error) {
+          console.warn('⚠️ No se pudo obtener datos del usuario:', error);
+          return {
+            ip: 'No disponible',
+            country: 'Desconocido',
+            city: 'Desconocido',
+            region: 'Desconocido',
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            language: navigator.language
+          };
+        }
+      }
+
+      async logVisit() {
+        const data = {
+          type: 'visit',
+          sessionId: this.sessionId,
+          timestamp: new Date().toISOString(),
+          page: window.location.href,
+          referrer: document.referrer || 'Directo',
+          ...this.userData
+        };
+        
+        this.visitId = await this.sendToSheet(data);
+        return this.visitId;
+      }
+
+      logAddToCart(product, quantity, price) {
+        const data = {
+          type: 'add_to_cart',
+          sessionId: this.sessionId,
+          visitId: this.visitId,
+          timestamp: new Date().toISOString(),
+          product: product,
+          quantity: quantity,
+          price: price,
+          total: this.calculateTotal(price, quantity),
+          ...this.userData
+        };
+        
+        this.buffer.push(data);
+        if (this.buffer.length >= this.bufferSize) {
+          this.flush();
+        }
+        
+        console.log('🛒 Producto agregado:', product, 'x' + quantity);
+        return data;
+      }
+
+      logOrder(orderData) {
+        const data = {
+          type: 'order_completed',
+          sessionId: this.sessionId,
+          visitId: this.visitId,
+          timestamp: new Date().toISOString(),
+          orderDetails: JSON.stringify(orderData),
+          totalItems: orderData.totalItems || 0,
+          totalAmount: orderData.totalAmount || 0,
+          products: JSON.stringify(orderData.products || []),
+          ...this.userData
+        };
+        
+        this.buffer.push(data);
+        this.flush(true); // Enviar inmediatamente
+        
+        console.log('✅ Pedido completado:', orderData);
+        return data;
+      }
+
+      logConversion(value) {
+        const data = {
+          type: 'conversion',
+          sessionId: this.sessionId,
+          visitId: this.visitId,
+          timestamp: new Date().toISOString(),
+          value: value || 0,
+          ...this.userData
+        };
+        
+        this.buffer.push(data);
+        this.flush(true);
+        
+        console.log('🎯 Conversión registrada:', value);
+        return data;
+      }
+
+      calculateTotal(price, quantity) {
+        const numericPrice = parseFloat(String(price).replace(/[^0-9.,]/g, '').replace(',', '.'));
+        return isNaN(numericPrice) ? 0 : numericPrice * quantity;
+      }
+
+      async sendToSheet(data) {
+        if (!this.isLoggingEnabled) return null;
+        
+        try {
+          const response = await fetch(this.apiEndpoint, {
+            method: 'POST',
+            mode: 'no-cors', // Necesario para Google Apps Script
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+          });
+          
+          // No podemos leer la respuesta en modo no-cors, pero el script la recibe
+          console.log('📤 Datos enviados:', data.type);
+          return data.sessionId;
+        } catch (error) {
+          console.warn('⚠️ Error enviando log:', error);
+          return null;
+        }
+      }
+
+      async flush(force = false) {
+        if (this.buffer.length === 0) return;
+        if (!force && this.buffer.length < this.bufferSize) return;
+        
+        const dataToSend = [...this.buffer];
+        this.buffer = [];
+        
+        for (const data of dataToSend) {
+          await this.sendToSheet(data);
+        }
+        
+        if (dataToSend.length > 0) {
+          console.log(`📤 Flush completado: ${dataToSend.length} eventos`);
+        }
+      }
+
+      // Registrar comportamiento de usuario
+      logEvent(eventName, eventData = {}) {
+        const data = {
+          type: 'user_event',
+          sessionId: this.sessionId,
+          visitId: this.visitId,
+          timestamp: new Date().toISOString(),
+          event: eventName,
+          eventData: JSON.stringify(eventData),
+          ...this.userData
+        };
+        
+        this.buffer.push(data);
+        if (this.buffer.length >= this.bufferSize) {
+          this.flush();
+        }
+      }
+    }
+
+    // ============================================================
     // 📦 DATOS DEL MENÚ
     // ============================================================
     const menuData = {
@@ -1743,7 +1963,6 @@
     // 🔒 UTILIDADES DE SEGURIDAD
     // ============================================================
 
-    // Escapa texto para inserción segura en HTML (previene XSS)
     function escapeHtml(value) {
       return String(value)
         .replace(/&/g, "&amp;")
@@ -1753,7 +1972,6 @@
         .replace(/'/g, "&#39;");
     }
 
-    // Solo permite rutas relativas locales (bloquea http:, javascript:, data:, //, y "..")
     function isSafeLocalUrl(url) {
       if (typeof url !== "string" || url.trim() === "") return false;
       if (/^(?:https?:|data:|javascript:|mailto:)|^\/\//i.test(url)) return false;
@@ -1761,7 +1979,6 @@
       return true;
     }
 
-    // Índice de productos para búsqueda O(1) al agregar al carrito (optimización)
     const itemIndex = new Map();
 
     // ============================================================
@@ -1783,6 +2000,7 @@
 
       let msg = `🍻 Hola! Quiero pedir en ${CONFIG.storeName}:\n\n`;
       let total = 0;
+      const products = [];
 
       // Agrupar por sección y categoría
       const grouped = {};
@@ -1796,6 +2014,17 @@
           grouped[section][category] = [];
         }
         grouped[section][category].push(v);
+        
+        const num = parseInt((v.price || "$ 0").replace(/[^0-9]/g, "")) || 0;
+        const subtotal = num * v.qty;
+        total += subtotal;
+        
+        products.push({
+          name: v.displayName,
+          quantity: v.qty,
+          price: v.price,
+          subtotal: subtotal
+        });
       });
 
       // Construir mensaje con secciones y categorías
@@ -1804,8 +2033,6 @@
         for (const [category, items] of Object.entries(categories)) {
           msg += `   🔹 ${category}:\n`;
           items.forEach(v => {
-            const num = parseInt((v.price || "$ 0").replace(/[^0-9]/g, "")) || 0;
-            total += num * v.qty;
             msg += `      • ${v.displayName} (x${v.qty}) - ${v.price}\n`;
           });
         }
@@ -1813,6 +2040,18 @@
       }
 
       msg += `💰 Total estimado: $ ${total.toLocaleString()}\n\n📍 Por favor confirma disponibilidad.`;
+      
+      // 📡 Registrar el pedido en el log
+      if (window.activityLogger) {
+        window.activityLogger.logOrder({
+          products: products,
+          totalItems: cart.size,
+          totalAmount: total,
+          message: msg
+        });
+        window.activityLogger.logConversion(total);
+      }
+      
       wa(msg);
     }
 
@@ -1830,7 +2069,6 @@
       const qtyData = cart.get(key);
       const qty = qtyData ? qtyData.qty : 0;
 
-      // Se iteran las filas comparando por dataset (evita inyección en selectores CSS)
       document.querySelectorAll(".row").forEach((row) => {
         if (row.dataset.name !== name || row.dataset.category !== category) return;
         const ops = row.querySelector(".ops");
@@ -1890,92 +2128,86 @@
       document.body.style.overflow = '';
     }
 
-function renderModal() {
-  const container = document.getElementById('modalContent');
+    function renderModal() {
+      const container = document.getElementById('modalContent');
 
-  if (!cart.size) {
-    container.innerHTML = `
-      <div class="modal-empty">
-        <div class="icon">🛒</div>
-        <p style="font-size:16px;font-weight:500;">Tu pedido está vacío</p>
-        <p style="font-size:13px;color:var(--muted);margin-top:6px;">Agrega productos desde el menú</p>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="modal-btn modal-btn-secondary btn-full" data-act="close">Seguir pidiendo</button>
-      </div>
-    `;
-    return;
-  }
-
-  // ============================================================
-  // 🟢 AGRUPAR POR SECCIÓN Y CATEGORÍA (igual que en WhatsApp)
-  // ============================================================
-  const grouped = {};
-  cart.forEach((v, key) => {
-    const section = v.section || "Sin sección";
-    const category = v.category || "Sin categoría";
-    if (!grouped[section]) {
-      grouped[section] = {};
-    }
-    if (!grouped[section][category]) {
-      grouped[section][category] = [];
-    }
-    grouped[section][category].push({ ...v, key });
-  });
-
-  let html = '<ul class="modal-items">';
-  let total = 0;
-
-  // ============================================================
-  // 🟢 CONSTRUIR HTML AGRUPADO (todo escapado para evitar XSS)
-  // ============================================================
-  for (const [section, categories] of Object.entries(grouped)) {
-    html += `<li style="list-style:none;padding:8px 0 4px;font-weight:700;font-size:14px;color:var(--accent);border-bottom:1px solid rgba(255,255,255,0.06);">📌 ${escapeHtml(section)}</li>`;
-
-    for (const [category, items] of Object.entries(categories)) {
-      html += `<li style="list-style:none;padding:4px 0 2px 12px;font-weight:600;font-size:12px;color:var(--muted);">🔹 ${escapeHtml(category)}</li>`;
-
-      items.forEach(v => {
-        const num = parseInt((v.price || "$ 0").replace(/[^0-9]/g, "")) || 0;
-        const subtotal = num * v.qty;
-        total += subtotal;
-        const ek = escapeHtml(encodeURIComponent(v.key));
-
-        html += `
-          <li class="modal-item" style="padding-left:24px;">
-            <div class="modal-item-info">
-              <span class="modal-item-name">${escapeHtml(v.displayName)}</span>
-              <span class="modal-item-detail">${escapeHtml(v.qty)} x ${escapeHtml(v.price)}</span>
-            </div>
-            <span class="modal-item-price">$ ${subtotal.toLocaleString()}</span>
-            <div class="modal-qty-group">
-              <button type="button" class="modal-qty-btn" data-act="dec" data-key="${ek}">−</button>
-              <span class="modal-qty-num">${escapeHtml(v.qty)}</span>
-              <button type="button" class="modal-qty-btn" data-act="inc" data-key="${ek}">+</button>
-            </div>
-            <button type="button" class="modal-item-remove" data-act="remove" data-key="${ek}" title="Eliminar producto">✕</button>
-          </li>
+      if (!cart.size) {
+        container.innerHTML = `
+          <div class="modal-empty">
+            <div class="icon">🛒</div>
+            <p style="font-size:16px;font-weight:500;">Tu pedido está vacío</p>
+            <p style="font-size:13px;color:var(--muted);margin-top:6px;">Agrega productos desde el menú</p>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="modal-btn modal-btn-secondary btn-full" data-act="close">Seguir pidiendo</button>
+          </div>
         `;
+        return;
+      }
+
+      const grouped = {};
+      cart.forEach((v, key) => {
+        const section = v.section || "Sin sección";
+        const category = v.category || "Sin categoría";
+        if (!grouped[section]) {
+          grouped[section] = {};
+        }
+        if (!grouped[section][category]) {
+          grouped[section][category] = [];
+        }
+        grouped[section][category].push({ ...v, key });
       });
+
+      let html = '<ul class="modal-items">';
+      let total = 0;
+
+      for (const [section, categories] of Object.entries(grouped)) {
+        html += `<li style="list-style:none;padding:8px 0 4px;font-weight:700;font-size:14px;color:var(--accent);border-bottom:1px solid rgba(255,255,255,0.06);">📌 ${escapeHtml(section)}</li>`;
+
+        for (const [category, items] of Object.entries(categories)) {
+          html += `<li style="list-style:none;padding:4px 0 2px 12px;font-weight:600;font-size:12px;color:var(--muted);">🔹 ${escapeHtml(category)}</li>`;
+
+          items.forEach(v => {
+            const num = parseInt((v.price || "$ 0").replace(/[^0-9]/g, "")) || 0;
+            const subtotal = num * v.qty;
+            total += subtotal;
+            const ek = escapeHtml(encodeURIComponent(v.key));
+
+            html += `
+              <li class="modal-item" style="padding-left:24px;">
+                <div class="modal-item-info">
+                  <span class="modal-item-name">${escapeHtml(v.displayName)}</span>
+                  <span class="modal-item-detail">${escapeHtml(v.qty)} x ${escapeHtml(v.price)}</span>
+                </div>
+                <span class="modal-item-price">$ ${subtotal.toLocaleString()}</span>
+                <div class="modal-qty-group">
+                  <button type="button" class="modal-qty-btn" data-act="dec" data-key="${ek}">−</button>
+                  <span class="modal-qty-num">${escapeHtml(v.qty)}</span>
+                  <button type="button" class="modal-qty-btn" data-act="inc" data-key="${ek}">+</button>
+                </div>
+                <button type="button" class="modal-item-remove" data-act="remove" data-key="${ek}" title="Eliminar producto">✕</button>
+              </li>
+            `;
+          });
+        }
+      }
+
+      html += '</ul>';
+
+      html += `
+        <div class="modal-total">
+          <span class="modal-total-label">Total estimado</span>
+          <span class="modal-total-amount">$ ${total.toLocaleString()}</span>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="modal-btn modal-btn-danger" data-act="clear">🗑️ Vaciar pedido</button>
+          <button type="button" class="modal-btn modal-btn-secondary" data-act="close">Seguir pidiendo</button>
+          <button type="button" class="modal-btn modal-btn-primary btn-full" data-act="confirm">✅ Confirmar pedido</button>
+        </div>
+      `;
+
+      container.innerHTML = html;
     }
-  }
-
-  html += '</ul>';
-
-  html += `
-    <div class="modal-total">
-      <span class="modal-total-label">Total estimado</span>
-      <span class="modal-total-amount">$ ${total.toLocaleString()}</span>
-    </div>
-    <div class="modal-actions">
-      <button type="button" class="modal-btn modal-btn-danger" data-act="clear">🗑️ Vaciar pedido</button>
-      <button type="button" class="modal-btn modal-btn-secondary" data-act="close">Seguir pidiendo</button>
-      <button type="button" class="modal-btn modal-btn-primary btn-full" data-act="confirm">✅ Confirmar pedido</button>
-    </div>
-  `;
-
-  container.innerHTML = html;
-}
 
     function modalQtyChange(encodedKey, delta) {
       const key = decodeURIComponent(encodedKey);
@@ -2222,7 +2454,7 @@ function renderModal() {
     }
 
     // ============================================================
-    // 🍔 MENÚ HAMBURGUESA - CORREGIDO
+    // 🍔 MENÚ HAMBURGUESA
     // ============================================================
 
     const hamburgerBtn = document.getElementById('hamburgerBtn');
@@ -2235,7 +2467,6 @@ function renderModal() {
         navMobile.classList.toggle('open');
       });
 
-      // Cerrar al hacer clic en un enlace
       navMobile.querySelectorAll('.nav-link-mobile').forEach(link => {
         link.addEventListener('click', function() {
           hamburgerBtn.classList.remove('active');
@@ -2243,7 +2474,6 @@ function renderModal() {
         });
       });
 
-      // Cerrar al hacer clic fuera
       document.addEventListener('click', function(e) {
         if (!hamburgerBtn.contains(e.target) && !navMobile.contains(e.target)) {
           hamburgerBtn.classList.remove('active');
@@ -2300,7 +2530,6 @@ function renderModal() {
       if (e.key === "Escape") closeModal();
     });
 
-    // Delegación de eventos del modal (reemplaza los onclick inline)
     document.getElementById("modalContent").addEventListener("click", function(e) {
       const btn = e.target.closest("button[data-act]");
       if (!btn) return;
@@ -2316,6 +2545,14 @@ function renderModal() {
 
     document.getElementById("fabWa").addEventListener("click", function(e) {
       e.preventDefault();
+      
+      // 📡 Registrar contacto por WhatsApp
+      if (window.activityLogger) {
+        window.activityLogger.logEvent('whatsapp_contact', {
+          source: 'fab_button'
+        });
+      }
+      
       wa(`Hola! Quiero más información sobre el menú de ${CONFIG.storeName}.`);
     });
 
@@ -2330,56 +2567,58 @@ function renderModal() {
       }
     });
 
-document.addEventListener("click", function(e) {
-  const btn = e.target.closest(".ops button");
-  if (!btn) return;
+    document.addEventListener("click", function(e) {
+      const btn = e.target.closest(".ops button");
+      if (!btn) return;
 
-  const name = btn.getAttribute("data-name");
-  const category = btn.getAttribute("data-category");
-  if (!name || !category) return;
+      const name = btn.getAttribute("data-name");
+      const category = btn.getAttribute("data-category");
+      if (!name || !category) return;
 
-  // Búsqueda O(1) vía índice (antes reconstruía y recorría todas las secciones)
-  const item = itemIndex.get(getItemKey(name, category));
-  if (!item) return;
+      const item = itemIndex.get(getItemKey(name, category));
+      if (!item) return;
 
-  const key = getItemKey(name, category);
-  const cur = cart.get(key);
-  let q = cur ? cur.qty : 0;
+      const key = getItemKey(name, category);
+      const cur = cart.get(key);
+      let q = cur ? cur.qty : 0;
 
-  const act = btn.getAttribute("data-act");
+      const act = btn.getAttribute("data-act");
 
-  // Sección desde la fila (data-section) para agrupar el pedido correctamente
-  let finalSection = "🍻 Cervezas por Unidad";
-  const row = btn.closest(".row");
-  if (row && row.dataset.section) finalSection = row.dataset.section;
+      let finalSection = "🍻 Cervezas por Unidad";
+      const row = btn.closest(".row");
+      if (row && row.dataset.section) finalSection = row.dataset.section;
 
-  if (act === "+") {
-    q += 1;
-  } else if (act === "-") {
-    q -= 1;
-    if (q <= 0) {
-      cart.delete(key);
+      if (act === "+") {
+        q += 1;
+      } else if (act === "-") {
+        q -= 1;
+        if (q <= 0) {
+          cart.delete(key);
+          refresh(name, category);
+          badge();
+          return;
+        }
+      } else {
+        q = 1;
+        // 📡 Registrar agregado al carrito
+        if (window.activityLogger) {
+          window.activityLogger.logAddToCart(name, 1, item.price);
+        }
+      }
+
+      cart.set(key, { 
+        name: name, 
+        category: category, 
+        section: finalSection,
+        displayName: name,
+        price: item.price, 
+        qty: q 
+      });
       refresh(name, category);
       badge();
-      return;
-    }
-  } else {
-    q = 1;
-  }
+    });
 
-  cart.set(key, { 
-    name: name, 
-    category: category, 
-    section: finalSection,
-    displayName: name,
-    price: item.price, 
-    qty: q 
-  });
-  refresh(name, category);
-  badge();
-});
-
-    // Offset cacheado (se recalcula tras el primer scroll / resize)
+    // Offset cacheado
     let cachedOffset = null;
     function getNavOffset() {
       if (cachedOffset !== null) return cachedOffset;
@@ -2431,6 +2670,9 @@ document.addEventListener("click", function(e) {
     // ============================================================
 
     (function init() {
+      // Inicializar sistema de log
+      window.activityLogger = new ActivityLogger();
+      
       buildMenu();
 
       const qs = new URLSearchParams(window.location.search);
@@ -2450,6 +2692,7 @@ document.addEventListener("click", function(e) {
       }, { passive: true });
 
       console.log("✅ Menú Bodega Beer cargado correctamente!");
+      console.log("📊 Sistema de Log activo!");
     })();
   </script>
 </body>
