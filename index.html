@@ -1467,211 +1467,299 @@
      * - Finalización de pedidos (envío a WhatsApp)
      * - Datos del usuario (IP, ubicación, navegador)
      */
-    class ActivityLogger {
-      constructor() {
-        this.sessionId = this.generateSessionId();
-        this.visitId = null;
-        this.isLoggingEnabled = true;
-        this.apiEndpoint = 'https://script.google.com/macros/s/AKfycbyuCDlLmBE0XL5hQoqtAYeTaJhLXWMEscxJWVuUMXg9Rhnx9rGlW5hK6K_9zvFiZh0n/exec'; // ¡REEMPLAZA CON TU URL!
-        this.buffer = [];
-        this.bufferSize = 5;
-        this.flushInterval = 30000; // 30 segundos
-        this.userData = null;
-        
-        this.init();
-      }
+// ============================================================
+// 📡 SISTEMA DE LOG - REGISTRO DE ACTIVIDAD (VERSION MEJORADA)
+// ============================================================
 
-      generateSessionId() {
-        return 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      }
+class ActivityLogger {
+  constructor() {
+    this.sessionId = this.generateSessionId();
+    this.visitId = null;
+    this.isLoggingEnabled = true;
+    this.apiEndpoint = 'https://script.google.com/macros/s/AKfycbyuCDlLmBE0XL5hQoqtAYeTaJhLXWMEscxJWVuUMXg9Rhnx9rGlW5hK6K_9zvFiZh0n/exec';
+    this.buffer = [];
+    this.bufferSize = 5;
+    this.flushInterval = 30000;
+    this.userData = null;
+    this.currency = 'COP';
+    this.startTime = Date.now();
+    
+    this.init();
+  }
 
-      async init() {
-        // Obtener datos del usuario
-        this.userData = await this.getUserData();
-        
-        // Registrar visita
-        await this.logVisit();
-        
-        // Configurar flush automático
-        setInterval(() => this.flush(), this.flushInterval);
-        
-        // Registrar cuando el usuario cierra la pestaña
-        window.addEventListener('beforeunload', () => {
-          this.flush(true);
-        });
-        
-        console.log('📊 Sistema de Log inicializado');
-      }
+  generateSessionId() {
+    return 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
 
-      async getUserData() {
-        try {
-          // Obtener IP
-          const ipResponse = await fetch('https://api.ipify.org?format=json');
-          const ipData = await ipResponse.json();
-          
-          // Obtener ubicación
-          const geoResponse = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
-          const geoData = await geoResponse.json();
-          
-          return {
-            ip: ipData.ip,
-            country: geoData.country_name || 'Desconocido',
-            city: geoData.city || 'Desconocido',
-            region: geoData.region || 'Desconocido',
-            timezone: geoData.timezone || 'Desconocido',
-            userAgent: navigator.userAgent,
-            platform: navigator.platform,
-            language: navigator.language,
-            screenResolution: `${screen.width}x${screen.height}`
-          };
-        } catch (error) {
-          console.warn('⚠️ No se pudo obtener datos del usuario:', error);
-          return {
-            ip: 'No disponible',
-            country: 'Desconocido',
-            city: 'Desconocido',
-            region: 'Desconocido',
-            userAgent: navigator.userAgent,
-            platform: navigator.platform,
-            language: navigator.language
-          };
-        }
-      }
+  generateVisitId() {
+    return 'vis_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
 
-      async logVisit() {
-        const data = {
-          type: 'visit',
-          sessionId: this.sessionId,
-          timestamp: new Date().toISOString(),
-          page: window.location.href,
-          referrer: document.referrer || 'Directo',
-          ...this.userData
-        };
-        
-        this.visitId = await this.sendToSheet(data);
-        return this.visitId;
-      }
+  async init() {
+    this.userData = await this.getUserData();
+    this.visitId = this.generateVisitId();
+    await this.logVisit();
+    
+    setInterval(() => this.flush(), this.flushInterval);
+    
+    window.addEventListener('beforeunload', () => {
+      this.flush(true);
+    });
+    
+    // Registrar tiempo de permanencia
+    window.addEventListener('pagehide', () => {
+      const timeOnPage = Math.round((Date.now() - this.startTime) / 1000);
+      this.logEvent('time_on_page', { seconds: timeOnPage });
+    });
+    
+    console.log('📊 Sistema de Log v2 inicializado');
+  }
 
-      logAddToCart(product, quantity, price) {
-        const data = {
-          type: 'add_to_cart',
-          sessionId: this.sessionId,
-          visitId: this.visitId,
-          timestamp: new Date().toISOString(),
-          product: product,
-          quantity: quantity,
-          price: price,
-          total: this.calculateTotal(price, quantity),
-          ...this.userData
-        };
-        
-        this.buffer.push(data);
-        if (this.buffer.length >= this.bufferSize) {
-          this.flush();
-        }
-        
-        console.log('🛒 Producto agregado:', product, 'x' + quantity);
-        return data;
-      }
-
-      logOrder(orderData) {
-        const data = {
-          type: 'order_completed',
-          sessionId: this.sessionId,
-          visitId: this.visitId,
-          timestamp: new Date().toISOString(),
-          orderDetails: JSON.stringify(orderData),
-          totalItems: orderData.totalItems || 0,
-          totalAmount: orderData.totalAmount || 0,
-          products: JSON.stringify(orderData.products || []),
-          ...this.userData
-        };
-        
-        this.buffer.push(data);
-        this.flush(true); // Enviar inmediatamente
-        
-        console.log('✅ Pedido completado:', orderData);
-        return data;
-      }
-
-      logConversion(value) {
-        const data = {
-          type: 'conversion',
-          sessionId: this.sessionId,
-          visitId: this.visitId,
-          timestamp: new Date().toISOString(),
-          value: value || 0,
-          ...this.userData
-        };
-        
-        this.buffer.push(data);
-        this.flush(true);
-        
-        console.log('🎯 Conversión registrada:', value);
-        return data;
-      }
-
-      calculateTotal(price, quantity) {
-        const numericPrice = parseFloat(String(price).replace(/[^0-9.,]/g, '').replace(',', '.'));
-        return isNaN(numericPrice) ? 0 : numericPrice * quantity;
-      }
-
-      async sendToSheet(data) {
-        if (!this.isLoggingEnabled) return null;
-        
-        try {
-          const response = await fetch(this.apiEndpoint, {
-            method: 'POST',
-            mode: 'no-cors', // Necesario para Google Apps Script
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-          });
-          
-          // No podemos leer la respuesta en modo no-cors, pero el script la recibe
-          console.log('📤 Datos enviados:', data.type);
-          return data.sessionId;
-        } catch (error) {
-          console.warn('⚠️ Error enviando log:', error);
-          return null;
-        }
-      }
-
-      async flush(force = false) {
-        if (this.buffer.length === 0) return;
-        if (!force && this.buffer.length < this.bufferSize) return;
-        
-        const dataToSend = [...this.buffer];
-        this.buffer = [];
-        
-        for (const data of dataToSend) {
-          await this.sendToSheet(data);
-        }
-        
-        if (dataToSend.length > 0) {
-          console.log(`📤 Flush completado: ${dataToSend.length} eventos`);
-        }
-      }
-
-      // Registrar comportamiento de usuario
-      logEvent(eventName, eventData = {}) {
-        const data = {
-          type: 'user_event',
-          sessionId: this.sessionId,
-          visitId: this.visitId,
-          timestamp: new Date().toISOString(),
-          event: eventName,
-          eventData: JSON.stringify(eventData),
-          ...this.userData
-        };
-        
-        this.buffer.push(data);
-        if (this.buffer.length >= this.bufferSize) {
-          this.flush();
-        }
-      }
+  async getUserData() {
+    try {
+      const ipResponse = await fetch('https://api.ipify.org?format=json');
+      const ipData = await ipResponse.json();
+      
+      const geoResponse = await fetch(`https://ipapi.co/${ipData.ip}/json/`);
+      const geoData = await geoResponse.json();
+      
+      return {
+        ip: ipData.ip,
+        country: geoData.country_name || 'Desconocido',
+        countryCode: geoData.country_code || '--',
+        city: geoData.city || 'Desconocido',
+        region: geoData.region || 'Desconocido',
+        postal: geoData.postal || '--',
+        timezone: geoData.timezone || 'Desconocido',
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        screenResolution: `${screen.width}x${screen.height}`,
+        deviceMemory: navigator.deviceMemory || '--'
+      };
+    } catch (error) {
+      return {
+        ip: 'No disponible',
+        country: 'Desconocido',
+        countryCode: '--',
+        city: 'Desconocido',
+        region: 'Desconocido',
+        postal: '--',
+        timezone: 'Desconocido',
+        userAgent: navigator.userAgent,
+        platform: navigator.platform,
+        language: navigator.language,
+        screenResolution: `${screen.width}x${screen.height}`,
+        deviceMemory: '--'
+      };
     }
+  }
+
+  async logVisit() {
+    const data = {
+      type: 'visit',
+      sessionId: this.sessionId,
+      visitId: this.visitId,
+      timestamp: new Date().toISOString(),
+      page: window.location.href,
+      referrer: document.referrer || 'Directo',
+      currency: this.currency,
+      ...this.userData
+    };
+    
+    await this.sendToSheet(data);
+    return this.visitId;
+  }
+
+  logAddToCart(product, quantity, price, category, section) {
+    const numericPrice = this.extractNumericPrice(price);
+    const total = numericPrice * quantity;
+    
+    const data = {
+      type: 'add_to_cart',
+      sessionId: this.sessionId,
+      visitId: this.visitId,
+      timestamp: new Date().toISOString(),
+      product: product,
+      quantity: quantity,
+      price: price,
+      priceNumeric: numericPrice,
+      total: total,
+      currency: this.currency,
+      category: category || '--',
+      section: section || '--',
+      ...this.userData
+    };
+    
+    this.buffer.push(data);
+    if (this.buffer.length >= this.bufferSize) {
+      this.flush();
+    }
+    
+    return data;
+  }
+
+  logOrder(orderData) {
+    const totalItems = orderData.totalItems || 0;
+    const totalAmount = orderData.totalAmount || 0;
+    
+    const data = {
+      type: 'order_completed',
+      sessionId: this.sessionId,
+      visitId: this.visitId,
+      timestamp: new Date().toISOString(),
+      orderId: this.generateOrderId(),
+      orderDetails: JSON.stringify(orderData),
+      products: JSON.stringify(orderData.products || []),
+      totalItems: totalItems,
+      totalAmount: totalAmount,
+      totalAmountFormatted: `$ ${totalAmount.toLocaleString()}`,
+      currency: this.currency,
+      message: orderData.message || '',
+      ...this.userData
+    };
+    
+    this.buffer.push(data);
+    this.flush(true); // Envío inmediato
+    return data;
+  }
+
+  logConversion(value) {
+    const data = {
+      type: 'conversion',
+      sessionId: this.sessionId,
+      visitId: this.visitId,
+      timestamp: new Date().toISOString(),
+      value: value || 0,
+      currency: this.currency,
+      ...this.userData
+    };
+    
+    this.buffer.push(data);
+    this.flush(true);
+    return data;
+  }
+
+  logEvent(eventName, eventData = {}) {
+    const data = {
+      type: 'user_event',
+      sessionId: this.sessionId,
+      visitId: this.visitId,
+      timestamp: new Date().toISOString(),
+      event: eventName,
+      eventData: JSON.stringify(eventData),
+      currency: this.currency,
+      ...this.userData
+    };
+    
+    this.buffer.push(data);
+    if (this.buffer.length >= this.bufferSize) {
+      this.flush();
+    }
+  }
+
+  extractNumericPrice(price) {
+    if (typeof price === 'number') return price;
+    const cleaned = String(price).replace(/[^0-9.,]/g, '').replace(',', '.');
+    return parseFloat(cleaned) || 0;
+  }
+
+  generateOrderId() {
+    const prefix = 'BB';
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substr(2, 4).toUpperCase();
+    return `${prefix}-${timestamp}-${random}`;
+  }
+
+  calculateTotal(price, quantity) {
+    return this.extractNumericPrice(price) * quantity;
+  }
+
+  async sendToSheet(data) {
+    if (!this.isLoggingEnabled) return null;
+    
+    try {
+      // Asegurar que todos los campos necesarios estén presentes
+      const payload = {
+        // Campos obligatorios
+        timestamp: data.timestamp || new Date().toISOString(),
+        type: data.type || 'unknown',
+        sessionId: data.sessionId || this.sessionId,
+        visitId: data.visitId || this.visitId,
+        
+        // Datos de ubicación
+        ip: data.ip || this.userData?.ip || '-',
+        country: data.country || this.userData?.country || '-',
+        countryCode: data.countryCode || this.userData?.countryCode || '-',
+        city: data.city || this.userData?.city || '-',
+        region: data.region || this.userData?.region || '-',
+        postal: data.postal || this.userData?.postal || '-',
+        timezone: data.timezone || this.userData?.timezone || '-',
+        
+        // Datos del pedido
+        product: data.product || '-',
+        quantity: data.quantity || 0,
+        price: data.price || '-',
+        priceNumeric: data.priceNumeric || 0,
+        total: data.total || 0,
+        currency: data.currency || this.currency || 'COP',
+        
+        // Datos del pedido completo
+        orderId: data.orderId || '-',
+        orderDetails: data.orderDetails || '-',
+        products: data.products || '-',
+        totalItems: data.totalItems || 0,
+        totalAmount: data.totalAmount || 0,
+        totalAmountFormatted: data.totalAmountFormatted || '-',
+        message: data.message || '-',
+        
+        // Datos de navegación
+        page: data.page || window.location.href,
+        referrer: data.referrer || document.referrer || 'Directo',
+        userAgent: data.userAgent || navigator.userAgent,
+        platform: data.platform || navigator.platform,
+        language: data.language || navigator.language,
+        screenResolution: data.screenResolution || `${screen.width}x${screen.height}`,
+        deviceMemory: data.deviceMemory || navigator.deviceMemory || '--',
+        
+        // Eventos
+        event: data.event || '-',
+        eventData: data.eventData || '-',
+        value: data.value || 0,
+        
+        // Metadata
+        environment: 'web',
+        timestampMs: Date.now()
+      };
+      
+      const response = await fetch(this.apiEndpoint, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      return payload.sessionId;
+    } catch (error) {
+      console.warn('⚠️ Error enviando log:', error);
+      return null;
+    }
+  }
+
+  async flush(force = false) {
+    if (this.buffer.length === 0) return;
+    if (!force && this.buffer.length < this.bufferSize) return;
+    
+    const dataToSend = [...this.buffer];
+    this.buffer = [];
+    
+    for (const data of dataToSend) {
+      await this.sendToSheet(data);
+    }
+  }
+}
 
     // ============================================================
     // 📦 DATOS DEL MENÚ
