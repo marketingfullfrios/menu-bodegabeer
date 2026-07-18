@@ -1471,6 +1471,10 @@
 // 📡 SISTEMA DE LOG - REGISTRO DE ACTIVIDAD (VERSION MEJORADA)
 // ============================================================
 
+// ============================================================
+// 📡 SISTEMA DE LOG - REGISTRO DE ACTIVIDAD (VERSION MEJORADA)
+// ============================================================
+
 class ActivityLogger {
   constructor() {
     this.sessionId = this.generateSessionId();
@@ -1495,6 +1499,30 @@ class ActivityLogger {
     return 'vis_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
   }
 
+  // ============================================================
+  // 🕐 FUNCIÓN PARA OBTENER HORA DE COLOMBIA (UTC-5)
+  // ============================================================
+  getColombiaTimestamp() {
+    const now = new Date();
+    // Restar 5 horas (UTC-5)
+    const colombiaTime = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+    // Formato: 2026-07-18 14:30:45
+    const year = colombiaTime.getFullYear();
+    const month = String(colombiaTime.getMonth() + 1).padStart(2, '0');
+    const day = String(colombiaTime.getDate()).padStart(2, '0');
+    const hours = String(colombiaTime.getHours()).padStart(2, '0');
+    const minutes = String(colombiaTime.getMinutes()).padStart(2, '0');
+    const seconds = String(colombiaTime.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  }
+
+  // Versión ISO para compatibilidad
+  getColombiaISO() {
+    const now = new Date();
+    const colombiaTime = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+    return colombiaTime.toISOString();
+  }
+
   async init() {
     this.userData = await this.getUserData();
     this.visitId = this.generateVisitId();
@@ -1506,13 +1534,12 @@ class ActivityLogger {
       this.flush(true);
     });
     
-    // Registrar tiempo de permanencia
     window.addEventListener('pagehide', () => {
       const timeOnPage = Math.round((Date.now() - this.startTime) / 1000);
       this.logEvent('time_on_page', { seconds: timeOnPage });
     });
     
-    console.log('📊 Sistema de Log v2 inicializado');
+    console.log('📊 Sistema de Log v2 inicializado (hora Colombia 🇨🇴)');
   }
 
   async getUserData() {
@@ -1560,7 +1587,8 @@ class ActivityLogger {
       type: 'visit',
       sessionId: this.sessionId,
       visitId: this.visitId,
-      timestamp: new Date().toISOString(),
+      timestamp: this.getColombiaTimestamp(), // ✅ HORA COLOMBIA
+      timestampISO: this.getColombiaISO(),     // ✅ ISO también
       page: window.location.href,
       referrer: document.referrer || 'Directo',
       currency: this.currency,
@@ -1579,7 +1607,8 @@ class ActivityLogger {
       type: 'add_to_cart',
       sessionId: this.sessionId,
       visitId: this.visitId,
-      timestamp: new Date().toISOString(),
+      timestamp: this.getColombiaTimestamp(), // ✅ HORA COLOMBIA
+      timestampISO: this.getColombiaISO(),
       product: product,
       quantity: quantity,
       price: price,
@@ -1607,7 +1636,8 @@ class ActivityLogger {
       type: 'order_completed',
       sessionId: this.sessionId,
       visitId: this.visitId,
-      timestamp: new Date().toISOString(),
+      timestamp: this.getColombiaTimestamp(), // ✅ HORA COLOMBIA
+      timestampISO: this.getColombiaISO(),
       orderId: this.generateOrderId(),
       orderDetails: JSON.stringify(orderData),
       products: JSON.stringify(orderData.products || []),
@@ -1620,7 +1650,7 @@ class ActivityLogger {
     };
     
     this.buffer.push(data);
-    this.flush(true); // Envío inmediato
+    this.flush(true);
     return data;
   }
 
@@ -1629,7 +1659,8 @@ class ActivityLogger {
       type: 'conversion',
       sessionId: this.sessionId,
       visitId: this.visitId,
-      timestamp: new Date().toISOString(),
+      timestamp: this.getColombiaTimestamp(), // ✅ HORA COLOMBIA
+      timestampISO: this.getColombiaISO(),
       value: value || 0,
       currency: this.currency,
       ...this.userData
@@ -1645,7 +1676,8 @@ class ActivityLogger {
       type: 'user_event',
       sessionId: this.sessionId,
       visitId: this.visitId,
-      timestamp: new Date().toISOString(),
+      timestamp: this.getColombiaTimestamp(), // ✅ HORA COLOMBIA
+      timestampISO: this.getColombiaISO(),
       event: eventName,
       eventData: JSON.stringify(eventData),
       currency: this.currency,
@@ -1679,10 +1711,11 @@ class ActivityLogger {
     if (!this.isLoggingEnabled) return null;
     
     try {
-      // Asegurar que todos los campos necesarios estén presentes
       const payload = {
-        // Campos obligatorios
-        timestamp: data.timestamp || new Date().toISOString(),
+        // TIMESTAMP con hora Colombia
+        timestamp: data.timestamp || this.getColombiaTimestamp(),
+        timestampISO: data.timestampISO || this.getColombiaISO(),
+        
         type: data.type || 'unknown',
         sessionId: data.sessionId || this.sessionId,
         visitId: data.visitId || this.visitId,
@@ -1732,7 +1765,7 @@ class ActivityLogger {
         timestampMs: Date.now()
       };
       
-      const response = await fetch(this.apiEndpoint, {
+      await fetch(this.apiEndpoint, {
         method: 'POST',
         mode: 'no-cors',
         headers: {
